@@ -25,3 +25,7 @@ class DINet(nn.Module):
         # y = self.classifier(f)
 
         return f
+
+class LRN(nn.Module):
+
+    def __init__(self, num_classes):

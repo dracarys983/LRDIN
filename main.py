@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.utils.data
 from torchvision.models import models
 
-import dinet
+import models
 import data
 
 model_names = ('alexnet', 'resnet50', 'vgg16')
