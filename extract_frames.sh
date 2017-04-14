@@ -1,18 +1,18 @@
 #!/bin/bash
 
-EXPECTED_ARGS=2
+EXPECTED_ARGS=3
 E_BADARGS=65
 
 if [ $# -lt $EXPECTED_ARGS ]
 then
-  echo "Usage: `basename $0` video frames/sec [size=256]"
+  echo "Usage: `basename $0` video outdir frames/sec [size=256]"
   exit $E_BADARGS
 fi
 
 NAME=${1%.*}
-FRAMES=$2
+DIR=$2
+FRAMES=$3
 BNAME=`basename $NAME`
-echo $BNAME
-mkdir -m 755 $BNAME
+mkdir -m 755 $DIR/$BNAME
 
-ffmpeg -i $1 -r $FRAMES $BNAME/$BNAME.%4d.jpg
+ffmpeg -i $1 -r $FRAMES $DIR/$BNAME/$BNAME.%4d.jpg

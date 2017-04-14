@@ -2,7 +2,7 @@ import argparse
 import os
 
 import torch.nn as nn
-import torch.utils.data
+import torch.utils.data as data_utils
 from torchvision.models import models
 
 import models
@@ -24,6 +24,12 @@ def main():
     global args, model
     args = parser.parse_args()
     num_classes = args.classes
+
+    UCF101 = data.UCF101(args.data)
+    train_loader = data_utils.DataLoader(dataset=UCF101,
+                                        batch_size=256,
+                                        shuffle=True,
+                                        num_workers=4)
 
     print("=> using pre-trained model '{}'".format(args.arch))
     orig_model = models.__dict__[args.arch](pretrained=True)
