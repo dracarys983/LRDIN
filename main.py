@@ -12,6 +12,7 @@ model_names = ('alexnet', 'resnet50', 'vgg16')
 
 parser = argparse.ArgumentParser(description='PyTorch: UCF-101 Data Processing')
 parser.add_argument('--data', metavar='DIR', help='Path to Dataset')
+parser.add_argument('--classfile', type=str, help='Path to class ID file')
 parser.add_argument('--arch', '-a', metavar='ARCH', default='alexnet',
                     choices=model_names, help='model architecture: ' +
                     ' | '.join(model_names) + ' (default: alexnet)')
@@ -25,12 +26,14 @@ def main():
     args = parser.parse_args()
     num_classes = args.classes
 
-    UCF101 = data.UCF101(args.data)
+    # Initialize the Dataset and Data Loader
+    UCF101 = data.UCF101(args.data, args.classfile)
     train_loader = data_utils.DataLoader(dataset=UCF101,
                                         batch_size=256,
                                         shuffle=True,
                                         num_workers=4)
 
+    # Initialize the Neural Network to be used
     print("=> using pre-trained model '{}'".format(args.arch))
     orig_model = models.__dict__[args.arch](pretrained=True)
     dynamicImageNet = DINet(orig_model, args.arch, num_classes)

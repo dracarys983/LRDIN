@@ -12,10 +12,17 @@ class UCF101(data_utils.Dataset):
     def __init__(self, datadir, classIdFile):
         self.datadir = datadir
         self.labels = os.listdir(datadir)
+
+        # Construct the string to int mapping for labels
         f = open(classIdFile, 'r')
         classes = f.readlines()
         classes = [x.strip().split() for x in classes]
-        self.intlabels = []
+        self.intlabels = {}
+        for x in classes:
+            self.intlabels[x[1]] = int(x[0])
+
+        # Construct the frames list for each video in each class
+        # Get the total number of frames
         self.videolist = {}
         self.framemap = {}
         self.totalframes = 0
@@ -51,7 +58,7 @@ class UCF101(data_utils.Dataset):
 
         im = Image.open(filename)
         numpy_im = np.array([im])
-        numpy_label = np.array([rlabel])
+        numpy_label = np.array([self.intlabels[rlabel]])
         return torch.from_numpy(numpy_im), torch.from_numpy(numpy_label)
 
     def __len__(self):
