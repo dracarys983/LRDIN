@@ -3,6 +3,7 @@ import torch
 
 import os
 import subprocess
+import math
 
 import numpy as np
 from PIL import Image
@@ -39,27 +40,47 @@ class UCF101(data_utils.Dataset):
                 self.framemap[label][vid] = frames
 
     def __getitem__(self, index):
-        processed = 0
-        global rlabel, rvid
-        framenum = 0
         for label in self.labels:
-            for vid in self.videolist[label]:
-                for framelist in self.framemap[label][vid]:
-                    if(processed + len(framelist) >= index):
-                        framenum = index - processed
-                        rlabel = label
-                        rvid = vid
-                        break
-                    processed += len(framelist)
-                    listnum += 1
-        rlist = self.framemap[rlabel][rvid]
-        rframe = rlist[framenum]
-        filename = self.datadir + '/' + rlabel + '/' + rvid + '/' + rframe
-
-        im = Image.open(filename)
-        numpy_im = np.array([im])
-        numpy_label = np.array([self.intlabels[rlabel]])
-        return torch.from_numpy(numpy_im), torch.from_numpy(numpy_label)
+            for vidi in len(self.videolist[label]):
+                if vidi == index:
+                    vidname = self.videolist[label].keys()[vidi]
+                    framelist = self.framemap[label][vidname]
+                    stepSize = 6
+                    dynFrames = 10
+                    dynImages = 10
+                    nFrames = len(framelist)
+                    nSteps = 0
+                    for i in range(0, nFrames):
+                        nSteps += 1
+                        i += stepSize
+                    if nSteps > 1 and nSteps > dynFrames:
+                        dynImages = min(dynImages, math.ceil(0.75 * nSteps))
+                        rpermi = np.random.permutation(nSteps)
+                        rpermi = rpermi[:dynImages]
+                        rselect = [0 * nSteps]
+                        rselect = [1 if x in rpermi else rselect[x] for x in range(len(rselect))]
+                    else:
+                        rselect = [1 * nSteps]
+                    count = 0
+                    resize = 227, 227
+                    ims = []
+                    labs = []
+                    for i in range(0, nFrames):
+                        if rselect[count]:
+                            idx = [x for x in range(i, min(i+dynFrames-1, nFrames))]
+                            for ind in idx:
+                                frame = framelist[ind]
+                                fpath = self.datadir + '/' + label + '/' + vidname + '/' + frame
+                                img = Image.open(fpath)
+                                img.thumbnail(resize, Image.ANTIALIAS)
+                                im = list(img.getdata())
+                                ims.append(im)
+                                labs.append(label)
+                        count += 1
+                        i += stepSize
+                else:
+                    continue
+        return torch.Tensor(ims), torch.Tensor(labs)
 
     def __len__(self):
         return self.totalframes

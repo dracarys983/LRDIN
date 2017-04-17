@@ -1,5 +1,7 @@
 import torch.nn as nn
 
+import layers
+
 class DINet(nn.Module):
 
     def __init__(self, orig_model, arch, num_classes):
@@ -18,6 +20,8 @@ class DINet(nn.Module):
             self.modelName = 'alexnet'
         else:
             raise NotImplementedError()
+
+        self.arpool = layers.ApproximateRankPooling()
 
 
     def forward(self, x):
