@@ -73,15 +73,14 @@ class UCF101(data_utils.Dataset):
                                 fpath = self.datadir + '/' + label + '/' + vidname + '/' + frame
                                 img = Image.open(fpath)
                                 img.thumbnail(resize, Image.ANTIALIAS)
-                                imgnp = np.array(img)
-                                im = np.ndarray.tolist(imgnp)
+                                im = np.array(img)
                                 ims.append(im)
                                 labs.append(self.intlabels[label])
                         count += 1
                         i += stepSize
                 else:
                     continue
-        return torch.Tensor(ims), torch.Tensor(labs)
+        return torch.Tensor(np.array(ims, dtype='float32')), torch.Tensor(np.array(labs, dtype='int32'))
 
     def __len__(self):
         return self.totalvids
