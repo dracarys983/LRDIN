@@ -23,20 +23,20 @@ class UCF101(data_utils.Dataset):
             self.intlabels[x[1]] = int(x[0])
 
         # Construct the frames list for each video in each class
-        # Get the total number of frames
+        # Get the total number of videos (batch size refers to videos)
         self.videolist = {}
         self.framemap = {}
-        self.totalframes = 0
+        self.totalvids = 0
         for label in self.labels:
             vidpath = self.datadir + '/' + label
             vlist = [x for x in sorted(os.listdir(vidpath))]
             self.videolist[label] = vlist
+            self.totalvids += len(vlist)
             self.framemap[label] = {}
             for vid in vlist:
                 fpath = vidpath + '/' + vid
                 frames = [x for x in sorted(os.listdir(fpath))
                         if os.path.isfile(fpath + '/' + x)]
-                self.totalframes += len(frames)
                 self.framemap[label][vid] = frames
 
     def __getitem__(self, index):
@@ -46,8 +46,8 @@ class UCF101(data_utils.Dataset):
                     vidname = self.videolist[label].keys()[vidi]
                     framelist = self.framemap[label][vidname]
                     stepSize = 6
-                    dynFrames = 10
-                    dynImages = 10
+                    dynFrames = 10      # Number of frames per Dynamic Image
+                    dynImages = 10      # Number of Dymamic Images to max pool
                     nFrames = len(framelist)
                     nSteps = 0
                     for i in range(0, nFrames):
@@ -73,9 +73,10 @@ class UCF101(data_utils.Dataset):
                                 fpath = self.datadir + '/' + label + '/' + vidname + '/' + frame
                                 img = Image.open(fpath)
                                 img.thumbnail(resize, Image.ANTIALIAS)
-                                im = list(img.getdata())
+                                imgnp = np.array(img)
+                                im = np.ndarray.tolist(imgnp)
                                 ims.append(im)
-                                labs.append(label)
+                                labs.append(self.intlabels[label])
                         count += 1
                         i += stepSize
                 else:
@@ -83,7 +84,7 @@ class UCF101(data_utils.Dataset):
         return torch.Tensor(ims), torch.Tensor(labs)
 
     def __len__(self):
-        return self.totalframes
+        return self.totalvids
 
 def extract_frames(datadir, outdir, frames_per_second):
     inps = os.listdir(datadir)
