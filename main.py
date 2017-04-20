@@ -10,7 +10,7 @@ import data
 
 model_names = ('alexnet', 'resnet50', 'vgg16')
 
-parser = argparse.ArgumentParser(description='PyTorch: UCF-101 Data Processing')
+parser = argparse.ArgumentParser(description='PyTorch: UCF-101 Action Recognition')
 parser.add_argument('--data', metavar='DIR', help='Path to Dataset')
 parser.add_argument('--classfile', type=str, help='Path to class ID file')
 parser.add_argument('--arch', '-a', metavar='ARCH', default='alexnet',
@@ -29,9 +29,9 @@ def main():
     # Initialize the Dataset and Data Loader
     UCF101 = data.UCF101(args.data, args.classfile)
     train_loader = data_utils.DataLoader(dataset=UCF101,
-                                        batch_size=256,
-                                        shuffle=True,
-                                        num_workers=4)
+                                        batch_size=8,
+                                        shuffle=False,
+                                        num_workers=2)
 
     # Initialize the Neural Network to be used
     print("=> using pre-trained model '{}'".format(args.arch))
@@ -51,3 +51,4 @@ def main():
             print("=> no checkpoint found at '{}'".format(args.resume))
 
     cudnn.benchmark = True
+    
