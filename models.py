@@ -21,14 +21,11 @@ class DINet(nn.Module):
         else:
             raise NotImplementedError()
 
-        self.arpool = layers.ApproximateRankPooling()
-
-
-    def forward(self, x):
-        f = self.features(x)
-        # y = self.classifier(f)
-
-        return f
+    def forward(self, x, nvids, dframes, vidids):
+        dyn = layers.ApproximateRankPooling()(x, nvids, dframes, vidids)
+        f = self.features(dyn)
+        y = self.classifier(f)
+        return y
 
 class LRN(nn.Module):
 
