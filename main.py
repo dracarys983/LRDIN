@@ -12,6 +12,7 @@ model_names = ('alexnet', 'resnet50', 'vgg16')
 
 parser = argparse.ArgumentParser(description='PyTorch: UCF-101 Action Recognition')
 parser.add_argument('--data', metavar='DIR', help='Path to Dataset')
+parser.add_argument('--outdir', help='Path to output frame directory')
 parser.add_argument('--classfile', type=str, help='Path to class ID file')
 parser.add_argument('--arch', '-a', metavar='ARCH', default='alexnet',
                     choices=model_names, help='model architecture: ' +
@@ -27,14 +28,12 @@ def main():
     num_classes = args.classes
 
     # Initialize the Dataset and Data Loader
-    outdir = '/Users/dracarys983/data'
+    outdir = args.outdir
     UCF101 = data.UCF101(outdir, args.classfile)
     train_loader = data_utils.DataLoader(dataset=UCF101,
                                         batch_size=8,
                                         shuffle=False,
-                                        num_workers=2)
-
-    return
+                                        num_workers=4)
 
     # Initialize the Neural Network to be used
     print("=> using pre-trained model '{}'".format(args.arch))
