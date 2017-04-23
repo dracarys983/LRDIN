@@ -3,7 +3,7 @@ import os
 
 import torch.nn as nn
 import torch.utils.data as data_utils
-from torchvision.models import models
+import torchvision.models as tmodels
 
 import models
 import data
@@ -27,15 +27,18 @@ def main():
     num_classes = args.classes
 
     # Initialize the Dataset and Data Loader
-    UCF101 = data.UCF101(args.data, args.classfile)
+    outdir = '/Users/dracarys983/data'
+    UCF101 = data.UCF101(outdir, args.classfile)
     train_loader = data_utils.DataLoader(dataset=UCF101,
                                         batch_size=8,
                                         shuffle=False,
                                         num_workers=2)
 
+    return
+
     # Initialize the Neural Network to be used
     print("=> using pre-trained model '{}'".format(args.arch))
-    orig_model = models.__dict__[args.arch](pretrained=True)
+    orig_model = tmodels.__dict__[args.arch](pretrained=True)
     dynamicImageNet = DINet(orig_model, args.arch, num_classes)
 
     if args.resume:
@@ -51,4 +54,7 @@ def main():
             print("=> no checkpoint found at '{}'".format(args.resume))
 
     cudnn.benchmark = True
-    
+
+
+if __name__ == '__main__':
+    main()

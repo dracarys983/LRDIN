@@ -43,8 +43,8 @@ class UCF101(data_utils.Dataset):
         self.train_data = []
         self.train_labels = []
         for label in self.labels:
-            for vidi in len(self.videolist[label]):
-                vidname = self.videolist[label].keys()[vidi]
+            for vidi in range(len(self.videolist[label])):
+                vidname = self.videolist[label][vidi]
                 framelist = self.framemap[label][vidname]
                 stepSize = 6
                 dynFrames = 10      # Number of frames per Dynamic Image
@@ -53,14 +53,16 @@ class UCF101(data_utils.Dataset):
                 nSteps = 0
                 for i in range(0, nFrames, stepSize):
                     nSteps += 1
+                print "Number of Frames: ", nFrames
+                print "Number of steps: ", nSteps
                 if nSteps > 1 and nSteps > dynFrames:
                     dynImages = min(dynImages, math.ceil(0.75 * nSteps))
                     rpermi = np.random.permutation(nSteps)
                     rpermi = rpermi[:dynImages]
-                    rselect = [0 * nSteps]
+                    rselect = [0] * nSteps
                     rselect = [1 if x in rpermi else rselect[x] for x in range(len(rselect))]
                 else:
-                    rselect = [1 * nSteps]
+                    rselect = [1] * nSteps
                 count = 0
                 vidid = 0
                 resize = 227, 227
@@ -68,6 +70,7 @@ class UCF101(data_utils.Dataset):
                 labs = []
                 self.vidids = []
                 for i in range(0, nFrames, stepSize):
+                    print "Counter value: ", count
                     if rselect[count]:
                         idx = [x for x in range(i, min(i+dynFrames-1, nFrames))]
                         self.vidids.extend([vidid] * len(idx))
@@ -81,8 +84,8 @@ class UCF101(data_utils.Dataset):
                             ims.append(im)
                             labs.append(self.intlabels[label])
                     count += 1
-                self.train_data.extend(torch.Tensor(np.array(ims, dtype='float32')))
-                self.train_labels.extend(torch.Tensor(np.array(labs, dtype='int32')))
+                self.train_data.extend(torch.from_numpy(np.array(ims, dtype='float32')))
+                self.train_labels.extend(torch.from_numpy(np.array(labs, dtype='int32')))
 
     def __getitem__(self, index):
         imgs, target = self.train_data[index], self.train_labels[index]

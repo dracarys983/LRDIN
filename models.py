@@ -26,7 +26,3 @@ class DINet(nn.Module):
         f = self.features(dyn)
         y = self.classifier(f)
         return y
-
-class LRN(nn.Module):
-
-    def __init__(self, num_classes):
