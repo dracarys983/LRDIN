@@ -31,29 +31,15 @@ def main():
     outdir = args.outdir
     UCF101 = data.UCF101(outdir, args.classfile)
     train_loader = data_utils.DataLoader(dataset=UCF101,
-                                        batch_size=8,
+                                        batch_size=2,
                                         shuffle=False,
                                         num_workers=4)
 
     # Initialize the Neural Network to be used
     print("=> using pre-trained model '{}'".format(args.arch))
     orig_model = tmodels.__dict__[args.arch](pretrained=True)
-    dynamicImageNet = DINet(orig_model, args.arch, num_classes)
-
-    if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
-
-    cudnn.benchmark = True
-
+    dynamicImageNet = models.DINet(orig_model, args.arch, num_classes)
+    print(dynamicImageNet)
 
 if __name__ == '__main__':
     main()

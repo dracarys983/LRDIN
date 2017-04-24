@@ -53,8 +53,6 @@ class UCF101(data_utils.Dataset):
                 nSteps = 0
                 for i in range(0, nFrames, stepSize):
                     nSteps += 1
-                print "Number of Frames: ", nFrames
-                print "Number of steps: ", nSteps
                 if nSteps > 1 and nSteps > dynFrames:
                     dynImages = min(dynImages, math.ceil(0.75 * nSteps))
                     rpermi = np.random.permutation(nSteps)
