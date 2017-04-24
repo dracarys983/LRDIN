@@ -22,18 +22,18 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
 parser.add_argument('--classes', default=101, type=int,
                     help='Number of output classes for Action Recognition')
 
+
 def main():
     global args, model
     args = parser.parse_args()
     num_classes = args.classes
 
+    print "Initialize the Dataset object ..."
     # Initialize the Dataset and Data Loader
     outdir = args.outdir
     UCF101 = data.UCF101(outdir, args.classfile)
-    train_loader = data_utils.DataLoader(dataset=UCF101,
-                                        batch_size=2,
-                                        shuffle=False,
-                                        num_workers=4)
+    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=2, 
+        shuffle=False, num_workers=4)
 
     # Initialize the Neural Network to be used
     print("=> using pre-trained model '{}'".format(args.arch))

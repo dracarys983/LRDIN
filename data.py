@@ -68,7 +68,6 @@ class UCF101(data_utils.Dataset):
                 labs = []
                 self.vidids = []
                 for i in range(0, nFrames, stepSize):
-                    print "Counter value: ", count
                     if rselect[count]:
                         idx = [x for x in range(i, min(i+dynFrames-1, nFrames))]
                         self.vidids.extend([vidid] * len(idx))
