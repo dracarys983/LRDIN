@@ -7,6 +7,7 @@ class DINet(nn.Module):
     def __init__(self, orig_model, arch, num_classes):
         super(DINet, self).__init__()
 
+        self.arpool = nn.Sequential(layers.ApproximateRankPooling())
         if arch.startswith('alexnet'):
             self.features = orig_model.features
             self.classifier = nn.Sequential(nn.Dropout(),
@@ -21,8 +22,8 @@ class DINet(nn.Module):
         else:
             raise NotImplementedError()
 
-    def forward(self, x, nvids, dframes, vidids):
-        dyn = layers.ApproximateRankPooling()(x, nvids, dframes, vidids)
+    def forward(self, x, vidids):
+        dyn = self.arpool(x, vidids)
         f = self.features(dyn)
         y = self.classifier(f)
         return y
