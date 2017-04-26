@@ -43,10 +43,11 @@ class UCF101(data_utils.Dataset):
     def __getitem__(self, index):
         train_data = []
         train_labels = []
+        processed = 0
         for label in self.labels:
             flag = 0
             for vidi in range(len(self.videolist[label])):
-                if vidi == index:
+                if processed+vidi == index:
                     vidname = self.videolist[label][vidi]
                     framelist = self.framemap[label][vidname]
                     stepSize = 6
@@ -57,7 +58,7 @@ class UCF101(data_utils.Dataset):
                     for i in range(0, nFrames, stepSize):
                         nSteps += 1
                     if nSteps > 1 and nSteps > dynFrames:
-                        dynImages = min(dynImages, int(math.ceil(0.75 * nSteps)))
+                       dynImages = min(dynImages, int(math.ceil(0.75 * nSteps)))
                         rpermi = np.random.permutation(nSteps)
                         rpermi = rpermi[:dynImages]
                         rselect = [0] * nSteps
@@ -79,27 +80,27 @@ class UCF101(data_utils.Dataset):
                                 frame = framelist[ind]
                                 fpath = self.datadir + '/' + label + '/' + vidname + '/' + frame
                                 img = Image.open(fpath)
-                                if img:
-                                    img = img.resize(resz, Image.ANTIALIAS)
-                                    im = np.array(img)
-                                    ims.append(im)
-                                    labs.append(self.intlabels[label])
+                                img = img.resize(resz, Image.ANTIALIAS)
+                                im = np.array(img)
+                                ims.append(im)
+                                labs.append(self.intlabels[label])
                         count += 1
                     train_data.extend(np.array(ims, dtype='float32'))
                     train_labels.extend(np.array(labs, dtype='int32'))
                     flag = 1
                     break
+            processed += len(self.videolist[label])
             if flag:
                 break
         train_data = np.array(train_data)
         train_labels = np.array(train_labels)
         s1 = train_data.shape[0]
         s2 = train_labels.shape[0]
-        diff = 90 - int(s1)
+        diff = int(90 - s1)
         if diff:
-            z = np.zeros(np.insert(np.array(train_data.shape[1:]), 0, diff, axis=0))
+            z = np.zeros(np.insert(np.array(train_data.shape[1:]), 0, diff, axis=0), dtype='float32')
             train_data = np.concatenate((train_data, z))
-            z = np.zeros(np.array(diff,))
+            z = np.zeros(np.array(diff,), dtype='int32')
             train_labels = np.concatenate((train_labels, z))
         return torch.from_numpy(np.array(train_data)), torch.from_numpy(np.array(train_labels))
 
