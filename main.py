@@ -1,5 +1,7 @@
 import argparse
 import os
+import timeit
+import time
 
 import torch.nn as nn
 import torch.utils.data as data_utils
@@ -28,18 +30,37 @@ def main():
     args = parser.parse_args()
     num_classes = args.classes
 
-    print "Initialize the Dataset object ..."
+    t_dataset_0 = timeit.default_timer()
+    print "[INFO] Initializing the Dataset object"
     # Initialize the Dataset and Data Loader
     outdir = args.outdir
     UCF101 = data.UCF101(outdir, args.classfile)
-    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=2, 
-        shuffle=False, num_workers=4)
+    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=5,
+        shuffle=False, num_workers=1)
+    print "[INFO] Dataset object initialized"
+    t_dataset_1 = timeit.default_timer()
 
+    t_modelinit_0 = timeit.default_timer()
     # Initialize the Neural Network to be used
-    print("=> using pre-trained model '{}'".format(args.arch))
+    print("[INFO] Using pre-trained model %s" % (args.arch))
     orig_model = tmodels.__dict__[args.arch](pretrained=True)
     dynamicImageNet = models.DINet(orig_model, args.arch, num_classes)
     print(dynamicImageNet)
+    t_modelinit_1 = timeit.default_timer()
+
+    t_load_0 = timeit.default_timer()
+    i = 0
+    start = time.time()
+    for batch in train_loader:
+        print("%i/%i, time=%.4f secs" % (i, len(UCF101), (time.time() - start)))
+        i += batch[0].size(0)
+        start = time.time()
+        break
+    t_load_1 = timeit.default_timer()
+
+    print("[TIME] Dataset Initialization: %.4f secs, Model Initialization: \
+        %.4f secs, Batchwise loading: %.4f" % (t_dataset_1 - t_dataset_0,
+        t_modelinit_1 - t_modelinit_0, t_load_1 - t_load_0))
 
 if __name__ == '__main__':
     main()
