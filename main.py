@@ -35,8 +35,8 @@ def main():
     # Initialize the Dataset and Data Loader
     outdir = args.outdir
     UCF101 = data.UCF101(outdir, args.classfile)
-    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=5,
-        shuffle=False, num_workers=1)
+    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=4,
+        shuffle=False, num_workers=4)
     print "[INFO] Dataset object initialized"
     t_dataset_1 = timeit.default_timer()
 
@@ -55,7 +55,6 @@ def main():
         print("%i/%i, time=%.4f secs" % (i, len(UCF101), (time.time() - start)))
         i += batch[0].size(0)
         start = time.time()
-        break
     t_load_1 = timeit.default_timer()
 
     print("[TIME] Dataset Initialization: %.4f secs, Model Initialization: \
