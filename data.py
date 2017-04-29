@@ -1,7 +1,7 @@
 import torch.utils.data as data_utils
 import torch
 
-import os
+import os, sys, time
 import subprocess
 import math
 
@@ -10,35 +10,47 @@ from PIL import Image
 
 class UCF101(data_utils.Dataset):
 
-    def __init__(self, datadir, classIdFile, train=True):
+    def __init__(self, datadir, ucftraintest, ucfclassid, train=True):
         self.datadir = datadir
         self.labels = os.listdir(datadir)
+        self.videolist = {}
+        self.framemap = {}
         self.train = train
 
+        classIdFile = ucfclassid
         # Construct the string to int mapping for labels
+        print("[INFO] Reading class ID file for integer labels ..")
         f = open(classIdFile, 'r')
         classes = f.readlines()
         classes = [x.strip().split() for x in classes]
         self.intlabels = {}
         for x in classes:
+            self.videolist[x[1]] = []
+            self.framemap[x[1]] = {}
             self.intlabels[x[1]] = int(x[0])
+        f.close()
+        print("[INFO] Class ID file read. Closing the file.")
 
         # Construct the frames list for each video in each class
         # Get the total number of videos (batch size refers to videos)
-        self.videolist = {}
-        self.framemap = {}
         self.totalvids = 0
-        for label in self.labels:
-            vidpath = self.datadir + '/' + label
-            vlist = [x for x in sorted(os.listdir(vidpath))]
-            self.videolist[label] = vlist
-            self.totalvids += len(vlist)
-            self.framemap[label] = {}
-            for vid in vlist:
-                fpath = vidpath + '/' + vid
-                frames = [x for x in sorted(os.listdir(fpath))
-                        if os.path.isfile(fpath + '/' + x)]
-                self.framemap[label][vid] = frames
+        tfile = ucftraintest
+        print("[INFO] Reading %s list : %s" % ('train' if self.train else 'test', tfile))
+        f = open(tfile, 'r')
+        lines = f.readlines()
+        labels = [x.strip().split('/')[0] for x in lines]
+        vids = [x.strip().split('/')[1].split('.')[0] for x in lines]
+        for i in range(len(labels)):
+            self.videolist[labels[i]].append(vids[i])
+            self.totalvids += 1
+            sys.stdout.write("\r[INFO] %.4d out of %.4d done" % (self.totalvids, len(lines)))
+            sys.stdout.flush()
+            fpath = self.datadir + '/' + labels[i] + '/' + vids[i]
+            frames = [x for x in sorted(os.listdir(fpath))
+                    if os.path.isfile(fpath + '/' + x)]
+            self.framemap[labels[i]][vids[i]] = frames
+        f.close()
+        print("\n[INFO] Done reading %s list : %s. Closing file." % ('train' if self.train else 'test', tfile))
 
     def __getitem__(self, index):
         train_data = []
@@ -58,7 +70,7 @@ class UCF101(data_utils.Dataset):
                     for i in range(0, nFrames, stepSize):
                         nSteps += 1
                     if nSteps > 1 and nSteps > dynFrames:
-                       dynImages = min(dynImages, int(math.ceil(0.75 * nSteps)))
+                        dynImages = min(dynImages, int(math.ceil(0.75 * nSteps)))
                         rpermi = np.random.permutation(nSteps)
                         rpermi = rpermi[:dynImages]
                         rselect = [0] * nSteps
@@ -67,7 +79,7 @@ class UCF101(data_utils.Dataset):
                         rselect = [1] * nSteps
                     count = 0
                     vidid = 0
-                    resz = (227, 227)
+                    resz = (256, 256)
                     ims = []
                     labs = []
                     self.vidids = []
@@ -102,7 +114,8 @@ class UCF101(data_utils.Dataset):
             train_data = np.concatenate((train_data, z))
             z = np.zeros(np.array(diff,), dtype='int32')
             train_labels = np.concatenate((train_labels, z))
-        return torch.from_numpy(np.array(train_data)), torch.from_numpy(np.array(train_labels))
+            self.vidids.extend([-1] * diff)
+        return torch.from_numpy(np.array(train_data)), torch.from_numpy(np.array(train_labels)), torch.from_numpy(np.array(self.vidids))
 
     def __len__(self):
         return self.totalvids
