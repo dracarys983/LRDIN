@@ -6,6 +6,7 @@ import time
 import torch.nn as nn
 import torch.utils.data as data_utils
 import torchvision.models as tmodels
+from torch.autograd import Variable
 
 import models
 import data
@@ -15,7 +16,8 @@ model_names = ('alexnet', 'resnet50', 'vgg16')
 parser = argparse.ArgumentParser(description='PyTorch: UCF-101 Action Recognition')
 parser.add_argument('--data', metavar='DIR', help='Path to Dataset')
 parser.add_argument('--outdir', help='Path to output frame directory')
-parser.add_argument('--classfile', type=str, help='Path to class ID file')
+parser.add_argument('--traintest', type=str, help='Path to class train/test split files')
+parser.add_argument('--classfile', type=str, help='Path to class IDs file')
 parser.add_argument('--arch', '-a', metavar='ARCH', default='alexnet',
                     choices=model_names, help='model architecture: ' +
                     ' | '.join(model_names) + ' (default: alexnet)')
@@ -34,9 +36,10 @@ def main():
     print "[INFO] Initializing the Dataset object"
     # Initialize the Dataset and Data Loader
     outdir = args.outdir
-    UCF101 = data.UCF101(outdir, args.classfile)
-    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=4,
-        shuffle=False, num_workers=4)
+    # Load train split 1
+    UCF101 = data.UCF101(outdir, args.traintest, args.classfile)
+    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=2,
+        shuffle=False, num_workers=1)
     print "[INFO] Dataset object initialized"
     t_dataset_1 = timeit.default_timer()
 
@@ -54,11 +57,15 @@ def main():
     for batch in train_loader:
         print("%i/%i, time=%.4f secs" % (i, len(UCF101), (time.time() - start)))
         i += batch[0].size(0)
+        x, labels, vidids = batch[0], batch[1], batch[2]
+        vidids = Variable(vidids, requires_grad=False)
+        x = Variable(x, requires_grad=False)
+        y = dynamicImageNet(x, vidids)
+        break
         start = time.time()
     t_load_1 = timeit.default_timer()
 
-    print("[TIME] Dataset Initialization: %.4f secs, Model Initialization: \
-        %.4f secs, Batchwise loading: %.4f" % (t_dataset_1 - t_dataset_0,
+    print("[TIME] Dataset Initialization: %.4f secs, Model Initialization: %.4f secs, Batchwise loading: %.4f" % (t_dataset_1 - t_dataset_0,
         t_modelinit_1 - t_modelinit_0, t_load_1 - t_load_0))
 
 if __name__ == '__main__':
