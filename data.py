@@ -1,5 +1,6 @@
 import torch.utils.data as data_utils
 import torch
+import torchvision.transforms as transforms
 
 import os, sys, time
 import subprocess
@@ -79,10 +80,13 @@ class UCF101(data_utils.Dataset):
                         rselect = [1] * nSteps
                     count = 0
                     vidid = 0
-                    resz = (256, 256)
                     ims = []
                     labs = []
                     self.vidids = []
+                    preprocess = transforms.Compose([
+                        transforms.CenterCrop(227),
+                        transforms.ToTensor()
+                    ])
                     for i in range(0, nFrames, stepSize):
                         if rselect[count]:
                             idx = [x for x in range(i, min(i+dynFrames-1, nFrames))]
@@ -92,9 +96,8 @@ class UCF101(data_utils.Dataset):
                                 frame = framelist[ind]
                                 fpath = self.datadir + '/' + label + '/' + vidname + '/' + frame
                                 img = Image.open(fpath)
-                                img = img.resize(resz, Image.ANTIALIAS)
-                                im = np.array(img)
-                                ims.append(im)
+                                im = preprocess(img)
+                                ims.append(im.numpy())
                                 labs.append(self.intlabels[label])
                         count += 1
                     train_data.extend(np.array(ims, dtype='float32'))
