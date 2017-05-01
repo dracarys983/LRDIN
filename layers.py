@@ -26,14 +26,14 @@ class ApproximateRankPooling(torch.autograd.Function):
                     nmagic = 1
                 else:
                     for i in range(N):
-                        nmagic[i] = sum([2*k-N-1/(k*1.0) for k in list(range(i+1, N+1))])
+                        nmagic[i] = np.sum([(2*k-N-1)/(k*1.0) for k in list(range(i+1, N+1))])
                 x_ = x[l][idv, :, :, :]
                 prod = x_*(np.reshape(nmagic, (N, 1, 1, 1)))
                 sprod = np.sum(prod, axis=0)
                 out_dynamic_images[v, :, :, :] = sprod
             result.append(out_dynamic_images)
         result = np.array(result, dtype='float32')
-        return torch.Tensor(result)
+        return torch.from_numpy(result)
 
     def backward(self, grad_output):
         x, vidids, = self.saved_tensors
@@ -56,4 +56,56 @@ class ApproximateRankPooling(torch.autograd.Function):
                 backpropogated_dynamic_images[idv, :, :, :] = dzdy * (np.reshape(nmagic, (N, 1, 1, 1)))
             result.append(backpropogated_dynamic_images)
         result = np.array(result, dtype='float32')
-        return torch.Tensor(result)
+        return torch.from_numpy(result)
+
+
+class L2Normalize(torch.autograd.Function):
+
+    def __init__(self):
+        super(L2Normalize, self).__init__()
+
+    def forward(self, x, params):
+        scale = params[0]
+        clip = params[1:2]
+        offset = params[3]
+
+        self.save_for_backward(x, torch.from_numpy(np.array(params, dtype='float32')))
+        x = x.numpy()
+        result = []
+        for i in range(len(x)):
+            if not np.all(np.array(x.shape[2:]).flatten() == 1):
+                np.reshape(x, (np.prod(x.shape[2:]), -1))
+            x[i] = x[i] + offset
+            y = np.array(x[i] * ((scale / np.sqrt(np.sum(x[i] * x[i]))) + np.float32(1e-12)), dtype='float32')
+            if np.all(np.logical_or(y[:] < clip[0], y[:] > clip[1])):
+                print 'Too small clipping interval'
+            y[y[:] < clip[0]] = clip[0]
+            y[y[:] > clip[1]] = clip[1]
+            if not np.all(np.array(x.shape[2:]).flatten() == 1):
+                np.reshape(y, x.shape)
+            result.append(y)
+        result = np.array(result, dtype='float32')
+        return torch.from_numpy(result)
+
+    def backward(self, grad_output):
+        x, params, = self.saved_tensors()
+        grad_input = grad_output.clone()
+
+        params = params.numpy().tolist()
+        scale = params[0]
+        clip = params[1:2]
+        offset = params[3]
+
+        result = []
+        for i in range(len(grad_input)):
+            if not np.all(np.array(x.shape[2:]).flatten() == 1):
+                np.reshape(grad_input, (np.prod(x.shape[2:]), -1))
+                np.reshape(x, (np.prod(x.shape[2:]), -1))
+            x[i] = x[i] + offset
+
+            len_ = 1 / np.sqrt(np.sum(x[i] * x[i]) + np.float32(1e-12))
+            grad_input_ = grad_input[i] * (np.power(len_, 3))
+            y = scale * ((grad_input[i] * len_) - (x[i] * np.sum(x[i] * grad_input_)))
+            result.append(y)
+        result = np.array(result, dtype='float32')
+        return torch.from_numpy(result)
