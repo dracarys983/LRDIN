@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.utils.data as data_utils
 import torchvision.models as tmodels
 from torch.autograd import Variable
+from torchvision.utils import save_image
+import torch.optim as optim
 
 import models
 import data
@@ -51,7 +53,9 @@ def main():
     print(dynamicImageNet)
     t_modelinit_1 = timeit.default_timer()
 
-    t_load_0 = timeit.default_timer()
+    #loss_fn = nn.CrossEntropyLoss()
+    #optimizer = optim.SGD(dynamicImageNet.parameters(), lr=0.01, momentum=0.9)
+    t_train_0 = timeit.default_timer()
     i = 0
     start = time.time()
     for batch in train_loader:
@@ -60,13 +64,17 @@ def main():
         x, labels, vidids = batch[0], batch[1], batch[2]
         vidids = Variable(vidids, requires_grad=False)
         x = Variable(x, requires_grad=False)
+        #optimizer.zero_grad()
         y = dynamicImageNet(x, vidids)
         break
+        #loss = loss_fn(y, labels)
+        #loss.backward()
+        #optimizer.step()
         start = time.time()
-    t_load_1 = timeit.default_timer()
+    t_train_1 = timeit.default_timer()
 
-    print("[TIME] Dataset Initialization: %.4f secs, Model Initialization: %.4f secs, Batchwise loading: %.4f" % (t_dataset_1 - t_dataset_0,
-        t_modelinit_1 - t_modelinit_0, t_load_1 - t_load_0))
+    print("[TIME] Dataset Initialization: %.4f secs, Model Initialization: %.4f secs, Batchwise training: %.4f secs" % (t_dataset_1 - t_dataset_0,
+        t_modelinit_1 - t_modelinit_0, t_train_1 - t_train_0))
 
 if __name__ == '__main__':
     main()
