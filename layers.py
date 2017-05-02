@@ -77,15 +77,17 @@ class L2Normalize(torch.autograd.Function):
         for i in range(len(x)):
             shapex = x[i].shape
             if not np.all(np.array(shapex[2:]).flatten() == 1):
-                np.reshape(x[i], (np.prod(shapex[2:]), -1))
-            x[i] = x[i] + offset
-            y = np.array(x[i] * ((scale / np.sqrt(np.sum(x[i] * x[i]))) + np.float32(1e-12)), dtype='float32')
+                x_ = np.reshape(x[i], (np.prod(shapex[2:]), -1))
+            else:
+                x_ = x[i]
+            x_ = x_ + offset
+            y = np.array(x_ * ((scale / np.sqrt(np.sum(x_ * x_))) + np.float32(1e-12)), dtype='float32')
             if np.all(np.logical_or(y[:] < clip[0], y[:] > clip[1])):
                 print 'Too small clipping interval'
             y[y[:] < clip[0]] = clip[0]
             y[y[:] > clip[1]] = clip[1]
             if not np.all(np.array(shapex[2:]).flatten() == 1):
-                np.reshape(y, shapex)
+                y = np.reshape(y, shapex)
             result.append(y)
         result = np.array(result, dtype='float32')
         return torch.from_numpy(result)
@@ -103,16 +105,21 @@ class L2Normalize(torch.autograd.Function):
         x = x.numpy()
         for i in range(len(grad_input)):
             shapex = x[i].shape
+            x_ = []
+            grad_input_ = []
             if not np.all(np.array(shapex[2:]).flatten() == 1):
-                np.reshape(grad_input, (np.prod(shapex[2:]), -1))
-                np.reshape(x[i], (np.prod(shapex[2:]), -1))
-            x[i] = x[i] + offset
+                grad_input_ = np.reshape(grad_input[i], (np.prod(shapex[2:]), -1))
+                x_ = np.reshape(x[i], (np.prod(shapex[2:]), -1))
+            else:
+                grad_input_ = grad_input[i]
+                x_ = x[i]
+            x_ = x_ + offset
 
-            len_ = 1 / np.sqrt(np.sum(x[i] * x[i]) + np.float32(1e-12))
-            grad_input_ = grad_input[i] * (np.power(len_, 3))
-            y = scale * ((grad_input[i] * len_) - (x[i] * np.sum(x[i] * grad_input_)))
+            len_ = 1 / np.sqrt(np.sum(x_ * x_) + np.float32(1e-12))
+            grad_input_i = grad_input_ * (np.power(len_, 3))
+            y = scale * ((grad_input_ * len_) - (x_ * np.sum(x_ * grad_input_i)))
             if not np.all(np.array(shapex[2:]).flatten() == 1):
-                np.reshape(y, shapex)
+                y = np.reshape(y, shapex)
             result.append(y)
         result = np.array(result, dtype='float32')
         return torch.from_numpy(result), params
