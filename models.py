@@ -14,6 +14,7 @@ class DINet(nn.Module):
 
         self.arpool = layers.ApproximateRankPooling()
         self.l2norm = layers.L2Normalize()
+        self.temppool = layers.TemporalPooling()
         if arch.startswith('alexnet'):
             self.features = orig_model.features
             self.classifier = nn.Sequential(nn.Dropout(),
@@ -29,23 +30,25 @@ class DINet(nn.Module):
             raise NotImplementedError()
 
     def forward(self, x, vidids):
+        # Approxmiate Rank Pooling layer : Get Dynamic Images
         dyn = self.arpool(x, vidids)
-        result = Variable(torch.FloatTensor(dyn.size(0), dyn.size(1), 1, 101))
-        inter = Variable(torch.FloatTensor(dyn.size(1), 1, 101))
+        # L2Normalize layer : Normalize the Dynamic Images
+        params = [6e3, -128, 128, 0]
+        params = Variable(torch.from_numpy(np.array(params)))
+        nimgs = self.l2norm(dyn, params)
+        # Initialize the result and intermediate tensors
+        result = Variable(torch.FloatTensor(nimgs.size(0), 1, 101))
         b = 0
-        for batch in dyn:
-            i = 0
+        # Forward pass through Alexnet
+        for batch in nimgs:
             # Debug code: Save and check dynamic images formed
             # fname = 'dynamic_image_' + str(b) + '.jpg'
             # save_image(tensor=batch.data, filename=fname)
-            for img in batch:
-                # Send in dimensions 1 x C x H x W (for a single image)
-                img = img.view(-1, img.size(0), img.size(1), img.size(2))
-                f = self.features(img)
-                f = f.view(f.size(0), 256 * 6 * 6)
-                c = self.classifier(f)
-                inter[i, :, :] = c
-                i += 1
-            result[b, :, :, :] = inter
+            f = self.features(batch)
+            f = self.temppool(f)
+            f = f.view(f.size(0), 256 * 6 * 6)
+            c = self.classifier(f)
+            result[b, :, :] = c
             b += 1
+
         return result
