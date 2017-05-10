@@ -14,9 +14,9 @@ class DINet(nn.Module):
 
         self.arpool = layers.ApproximateRankPooling()
         self.l2norm = layers.L2Normalize()
-        self.temppool = layers.TemporalPooling()
         if arch.startswith('alexnet'):
             self.features = orig_model.features
+            self.temppool = layers.TemporalPooling()
             self.classifier = nn.Sequential(nn.Dropout(),
                                             nn.Linear(256 * 6 * 6, 4096),
                                             nn.ReLU(inplace=True),
@@ -24,6 +24,7 @@ class DINet(nn.Module):
                                             nn.Linear(4096, 4096),
                                             nn.ReLU(inplace=True),
                                             nn.Linear(4096, num_classes),
+                                            nn.Softmax()
                                             )
             self.modelName = 'alexnet'
         else:
@@ -37,7 +38,7 @@ class DINet(nn.Module):
         params = Variable(torch.from_numpy(np.array(params)))
         nimgs = self.l2norm(dyn, params)
         # Initialize the result and intermediate tensors
-        result = Variable(torch.FloatTensor(nimgs.size(0), 1, 101))
+        result = Variable(torch.FloatTensor(nimgs.size(0), 101))
         b = 0
         # Forward pass through Alexnet
         for batch in nimgs:
@@ -45,10 +46,9 @@ class DINet(nn.Module):
             # fname = 'dynamic_image_' + str(b) + '.jpg'
             # save_image(tensor=batch.data, filename=fname)
             f = self.features(batch)
-            f = self.temppool(f)
-            f = f.view(f.size(0), 256 * 6 * 6)
-            c = self.classifier(f)
-            result[b, :, :] = c
+            t = self.temppool(f)
+            t = t.view(t.size(0), 256 * 6 * 6)
+            c = self.classifier(t)
+            result[b, :] = c[0]
             b += 1
-
         return result
