@@ -3,6 +3,9 @@ import os
 import timeit
 import time
 
+import numpy as np
+
+import torch
 import torch.nn as nn
 import torch.utils.data as data_utils
 import torchvision.models as tmodels
@@ -53,8 +56,8 @@ def main():
     print(dynamicImageNet)
     t_modelinit_1 = timeit.default_timer()
 
-    #loss_fn = nn.CrossEntropyLoss()
-    #optimizer = optim.SGD(dynamicImageNet.parameters(), lr=0.01, momentum=0.9)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(dynamicImageNet.parameters(), lr=0.01, momentum=0.9)
     t_train_0 = timeit.default_timer()
     i = 0
     start = time.time()
@@ -62,14 +65,22 @@ def main():
         print("%i/%i, time=%.4f secs" % (i, len(UCF101), (time.time() - start)))
         i += batch[0].size(0)
         x, labels, vidids = batch[0], batch[1], batch[2]
+        targets = []
+        for i in range(len(labels)):
+            targets.append(labels[i][0]-1)
+        targets = np.array(targets, dtype='int64')
+        targets = Variable(torch.from_numpy(targets))
         vidids = Variable(vidids, requires_grad=False)
         x = Variable(x, requires_grad=False)
-        #optimizer.zero_grad()
+        optimizer.zero_grad()
         y = dynamicImageNet(x, vidids)
+        loss = criterion(y, targets)
+        print 'Loss calculated'
+        loss.backward()
+        print 'Loss backpropogated'
+        optimizer.step()
+        print 'Variables updated'
         break
-        #loss = loss_fn(y, labels)
-        #loss.backward()
-        #optimizer.step()
         start = time.time()
     t_train_1 = timeit.default_timer()
 
