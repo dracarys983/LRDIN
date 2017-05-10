@@ -37,6 +37,7 @@ class ApproximateRankPooling(torch.autograd.Function):
         return torch.from_numpy(result)
 
     def backward(self, grad_output):
+        print 'ApproximateRankPooling backward pass'
         x, vidids, = self.saved_tensors
         backpropogated_dynamic_images = np.zeros(x.size())
         nvids = np.max(vidids.numpy())
@@ -93,7 +94,8 @@ class L2Normalize(torch.autograd.Function):
         return torch.from_numpy(result)
 
     def backward(self, grad_output):
-        x, params, = self.saved_tensors()
+        print 'L2Normalize backward pass'
+        x, params, = self.saved_tensors
         grad_input = grad_output.clone()
 
         p = params.numpy().tolist()
@@ -124,6 +126,7 @@ class L2Normalize(torch.autograd.Function):
         result = np.array(result, dtype='float32')
         return torch.from_numpy(result), params
 
+
 class TemporalPooling(torch.autograd.Function):
 
     def __init__(self):
@@ -137,16 +140,34 @@ class TemporalPooling(torch.autograd.Function):
         y = pool_layer(inp)
         return y.data.permute(3,0,1,2)
 
-    # TODO: Complete backward pass
     def backward(self, grad_output):
-        x, = self.saved_tensors()
-
-        grad_input = grad_output.clone()
-        result = np.zeros(list(x.size()))
+        print 'TemporalPooling backward pass'
+        x, = self.saved_tensors
 
         pool_layer = nn.MaxPool2d((1, 9), stride=(1, 9))
-        for i in range(len(grad_input)):
-            inp = x[i].permute(1,2,3,0)
-            grad_inp = grad_input[i].permute(1,2,3,0)
+        grad_input = grad_output.clone()
 
-        return torch.from_numpy(result)
+        inp = x.permute(1,2,3,0).numpy()
+        grad_inp = grad_input.permute(1,2,3,0).numpy()
+        result = np.zeros(inp.shape, dtype='float32')
+
+        N, C, H, W = inp.shape
+        H_ = 1 + (H - 1) / 1
+        W_ = 1 + (W - 9) / 9
+        for n in range(N):
+            for c in range(C):
+                for h in range(H_):
+                    for w in range(W_):
+                        h1 = h
+                        h2 = h + 1
+                        w1 = w * 9
+                        w2 = w * 9 + 9
+                        window = inp[n, c, h1:h2, w1:w2]
+                        window2 = np.reshape(window, 1*9)
+                        window3 = np.zeros_like(window2)
+                        window3[np.argmax(window2)] = 1
+
+                        result[n, c, h1:h2, w1:w2] = np.reshape(window3, (1, 9)) * grad_inp[n,c,h,w]
+
+        print 'TemporalPooling backward pass done'
+        return torch.from_numpy(result).permute(3,0,1,2)
