@@ -31,21 +31,21 @@ class DINet(nn.Module):
             raise NotImplementedError()
 
     def forward(self, x, vidids):
-        # Approxmiate Rank Pooling layer : Get Dynamic Images
-        dyn = self.arpool(x, vidids)
-        # L2Normalize layer : Normalize the Dynamic Images
         params = [6e3, -128, 128, 0]
         params = Variable(torch.from_numpy(np.array(params)))
-        nimgs = self.l2norm(dyn, params)
         # Initialize the result and intermediate tensors
         result = Variable(torch.FloatTensor(nimgs.size(0), 101))
         b = 0
         # Forward pass through Alexnet
-        for batch in nimgs:
+        for batch in x:
+            # Approxmiate Rank Pooling layer : Get Dynamic Images
+            dyn = self.arpool(batch, vidids)
+            # L2Normalize layer : Normalize the Dynamic Images
+            nimgs = self.l2norm(dyn, params)
             # Debug code: Save and check dynamic images formed
             # fname = 'dynamic_image_' + str(b) + '.jpg'
-            # save_image(tensor=batch.data, filename=fname)
-            f = self.features(batch)
+            # save_image(tensor=nimgs.data, filename=fname)
+            f = self.features(nimgs)
             t = self.temppool(f)
             t = t.view(t.size(0), 256 * 6 * 6)
             c = self.classifier(t)
