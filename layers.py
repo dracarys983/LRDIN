@@ -13,12 +13,10 @@ class ApproximateRankPooling(torch.autograd.Function):
         nvids = np.max(vidids.numpy())
         out_size_fwd = np.insert(np.array(x.size()[1:]), 0, nvids, axis=0).tolist()
 
-        result = []
         out_dynamic_images = np.zeros(out_size_fwd)
         self.save_for_backward(x, vidids)
         x = x.numpy()
         vidids = vidids.numpy()
-        #for l in range(len(x)):
         for v in range(nvids):
             idv = [i for i in range(len(vidids)) if vidids[i] == v]
             N = len(idv)
@@ -32,8 +30,7 @@ class ApproximateRankPooling(torch.autograd.Function):
             prod = x_*(np.reshape(nmagic, (N, 1, 1, 1)))
             sprod = np.sum(prod, axis=0)
             out_dynamic_images[v, :, :, :] = sprod
-        result.append(out_dynamic_images)
-        result = np.array(result, dtype='float32')
+        result = np.array(out_dynamic_images, dtype='float32')
         return torch.from_numpy(result)
 
     def backward(self, grad_output):
@@ -42,8 +39,6 @@ class ApproximateRankPooling(torch.autograd.Function):
         backpropogated_dynamic_images = np.zeros(x.size())
         nvids = np.max(vidids.numpy())
         vids = vidids.numpy().tolist()
-        result = []
-        #for g in grad_output:
         for v in range(nvids):
             idv = [i for i in range(len(vids)) if vids[i] == v]
             N = len(idv)
@@ -56,8 +51,7 @@ class ApproximateRankPooling(torch.autograd.Function):
             grad_input = grad_output.clone().numpy()
             dzdy = np.tile(grad_input[v, :, :, :], [N, 1, 1, 1])
             backpropogated_dynamic_images[idv, :, :, :] = dzdy * (np.reshape(nmagic, (N, 1, 1, 1)))
-        result.append(backpropogated_dynamic_images)
-        result = np.array(result, dtype='float32')
+        result = np.array(backpropogated_dynamic_images, dtype='float32')
         return torch.from_numpy(result), vidids
 
 
@@ -74,8 +68,6 @@ class L2Normalize(torch.autograd.Function):
         offset = params[3]
 
         x = x.numpy()
-        result = []
-        #for i in range(len(x)):
         shapex = x.shape
         if not np.all(np.array(shapex[1:]).flatten() == 1):
             x_ = np.reshape(x, (np.prod(shapex[1:]), -1))
@@ -89,23 +81,20 @@ class L2Normalize(torch.autograd.Function):
         y[y[:] > clip[1]] = clip[1]
         if not np.all(np.array(shapex[1:]).flatten() == 1):
             y = np.reshape(y, shapex)
-        result.append(y)
-        result = np.array(result, dtype='float32')
+        result = np.array(y, dtype='float32')
         return torch.from_numpy(result)
 
     def backward(self, grad_output):
         print 'L2Normalize backward pass'
         x, params, = self.saved_tensors
-        grad_input = grad_output.clone()
+        grad_input = grad_output.clone().numpy()
 
         p = params.numpy().tolist()
         scale = p[0]
         clip = p[1:3]
         offset = p[3]
 
-        result = []
         x = x.numpy()
-        #for i in range(len(grad_input)):
         shapex = x.shape
         x_ = []
         grad_input_ = []
@@ -122,8 +111,7 @@ class L2Normalize(torch.autograd.Function):
         y = scale * ((grad_input_ * len_) - (x_ * np.sum(x_ * grad_input_i)))
         if not np.all(np.array(shapex[1:]).flatten() == 1):
             y = np.reshape(y, shapex)
-        result.append(y)
-        result = np.array(result, dtype='float32')
+        result = np.array(y, dtype='float32')
         return torch.from_numpy(result), params
 
 
@@ -144,7 +132,6 @@ class TemporalPooling(torch.autograd.Function):
         print 'TemporalPooling backward pass'
         x, = self.saved_tensors
 
-        pool_layer = nn.MaxPool2d((1, 9), stride=(1, 9))
         grad_input = grad_output.clone()
 
         inp = x.permute(1,2,3,0).numpy()
@@ -171,3 +158,31 @@ class TemporalPooling(torch.autograd.Function):
 
         print 'TemporalPooling backward pass done'
         return torch.from_numpy(result).permute(3,0,1,2)
+
+
+class ARPool(nn.Module):
+    def __init__(self):
+        super(ARPool, self).__init__()
+        self.layer = ApproximateRankPooling()
+
+    def forward(self, x, vidids):
+        result = self.layer(x, vidids)
+        return result
+
+class L2Norm(nn.Module):
+    def __init__(self):
+        super(L2Norm, self).__init__()
+        self.layer = L2Normalize()
+
+    def forward(self, x, params):
+        result = self.layer(x, params)
+        return result
+
+class TempPool(nn.Module):
+    def __init__(self):
+        super(TempPool, self).__init__()
+        self.layer = TemporalPooling()
+
+    def forward(self, x):
+        result = self.layer(x)
+        return result
