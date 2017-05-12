@@ -66,8 +66,8 @@ def main():
         i += batch[0].size(0)
         x, labels, vidids = batch[0], batch[1], batch[2]
         targets = []
-        for i in range(len(labels)):
-            targets.append(labels[i][0]-1)
+        for j in range(len(labels)):
+            targets.append(labels[j][0]-1)
         targets = np.array(targets, dtype='int64')
         targets = Variable(torch.from_numpy(targets))
         vidids = Variable(vidids, requires_grad=False)
@@ -76,11 +76,10 @@ def main():
         y = dynamicImageNet(x, vidids)
         loss = criterion(y, targets)
         print 'Loss calculated'
-        loss.backward()
+        loss.backward(retain_variables=True)
         print 'Loss backpropogated'
         optimizer.step()
         print 'Variables updated'
-        break
         start = time.time()
     t_train_1 = timeit.default_timer()
 
