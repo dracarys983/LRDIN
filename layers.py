@@ -34,7 +34,6 @@ class ApproximateRankPooling(torch.autograd.Function):
         return torch.from_numpy(result)
 
     def backward(self, grad_output):
-        print 'ApproximateRankPooling backward pass'
         x, vidids, = self.saved_tensors
         backpropogated_dynamic_images = np.zeros(x.size())
         nvids = np.max(vidids.numpy())
@@ -47,7 +46,7 @@ class ApproximateRankPooling(torch.autograd.Function):
                 nmagic = 1
             else:
                 for i in range(N):
-                    nmagic[i] = sum([2*k-N-1/(k*1.0) for k in list(range(i, N+1))])
+                    nmagic[i] = sum([2*(k+1)-N-1/((k+1)*1.0) for k in list(range(i, N+1))])
             grad_input = grad_output.clone().numpy()
             dzdy = np.tile(grad_input[v, :, :, :], [N, 1, 1, 1])
             backpropogated_dynamic_images[idv, :, :, :] = dzdy * (np.reshape(nmagic, (N, 1, 1, 1)))
@@ -85,7 +84,6 @@ class L2Normalize(torch.autograd.Function):
         return torch.from_numpy(result)
 
     def backward(self, grad_output):
-        print 'L2Normalize backward pass'
         x, params, = self.saved_tensors
         grad_input = grad_output.clone().numpy()
 
@@ -129,7 +127,6 @@ class TemporalPooling(torch.autograd.Function):
         return y.data.permute(3,0,1,2)
 
     def backward(self, grad_output):
-        print 'TemporalPooling backward pass'
         x, = self.saved_tensors
 
         grad_input = grad_output.clone()
@@ -156,7 +153,6 @@ class TemporalPooling(torch.autograd.Function):
 
                         result[n, c, h1:h2, w1:w2] = np.reshape(window3, (1, 9)) * grad_inp[n,c,h,w]
 
-        print 'TemporalPooling backward pass done'
         return torch.from_numpy(result).permute(3,0,1,2)
 
 
