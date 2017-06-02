@@ -43,26 +43,25 @@ def main():
     outdir = args.outdir
     # Load train split 1
     UCF101 = data.UCF101(outdir, args.traintest, args.classfile)
-    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=2,
-        shuffle=False, num_workers=1)
+    train_loader = data_utils.DataLoader(dataset=UCF101, batch_size=5,
+        shuffle=True, num_workers=1)
     print "[INFO] Dataset object initialized"
     t_dataset_1 = timeit.default_timer()
 
     t_modelinit_0 = timeit.default_timer()
     # Initialize the Neural Network to be used
-    print("[INFO] Using pre-trained model %s" % (args.arch))
+    print "[INFO] Using pre-trained model %s" % (args.arch)
     orig_model = tmodels.__dict__[args.arch](pretrained=True)
     dynamicImageNet = models.DINet(orig_model, args.arch, num_classes)
     print(dynamicImageNet)
     t_modelinit_1 = timeit.default_timer()
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(dynamicImageNet.parameters(), lr=0.01, momentum=0.9)
+    optimizer = optim.SGD(dynamicImageNet.parameters(), lr=0.1, momentum=0.9)
     t_train_0 = timeit.default_timer()
     i = 0
     start = time.time()
     for batch in train_loader:
-        print("%i/%i, time=%.4f secs" % (i, len(UCF101), (time.time() - start)))
         i += batch[0].size(0)
         x, labels, vidids = batch[0], batch[1], batch[2]
         targets = []
@@ -71,15 +70,16 @@ def main():
         targets = np.array(targets, dtype='int64')
         targets = Variable(torch.from_numpy(targets))
         vidids = Variable(vidids, requires_grad=False)
-        x = Variable(x, requires_grad=False)
+        x = Variable(x, requires_grad=True)
         optimizer.zero_grad()
         y = dynamicImageNet(x, vidids)
         loss = criterion(y, targets)
-        print 'Loss calculated'
+        print "[INFO] Loss calculated: %.4f" % loss.data[0]
         loss.backward(retain_variables=True)
-        print 'Loss backpropogated'
+        print "[INFO] Loss backpropogated"
         optimizer.step()
-        print 'Variables updated'
+        print "[INFO] Variables updated"
+        print "[TIME] %i of %i done, time=%.4f secs" % (i, len(UCF101), (time.time() - start))
         start = time.time()
     t_train_1 = timeit.default_timer()
 
