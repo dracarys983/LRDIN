@@ -24,7 +24,7 @@ class DINet(nn.Module):
                                             nn.Linear(4096, 4096),
                                             nn.ReLU(inplace=True),
                                             nn.Linear(4096, num_classes),
-                                            nn.Softmax()
+                                            nn.LogSoftmax()
                                             )
             self.modelName = 'alexnet'
         else:
@@ -32,9 +32,9 @@ class DINet(nn.Module):
 
     def forward(self, x, vidids):
         params = [6e3, -128, 128, 0]
-        params = Variable(torch.from_numpy(np.array(params)))
+        params = Variable(torch.from_numpy(np.array(params)).cuda())
         # Initialize the result tensor
-        result = Variable(torch.FloatTensor(x.size(0), 101))
+        result = Variable(torch.cuda.FloatTensor(x.size(0), 101))
         b = 0
         # Forward pass through Alexnet
         for batch in x:
@@ -49,8 +49,8 @@ class DINet(nn.Module):
             f = self.features(nimgs)
             # TemporalPooling layer : Pool across Dynamic Images
             t = self.temppool(f)
-            t = t.view(t.size(0), 256 * 6 * 6)
-            # Classification layers (Fully Connected) with Softmax
+            t = t.contiguous().view(t.size(0), 256 * 6 * 6)
+            # Classification layers (Fully Connected) with LogSoftmax
             c = self.classifier(t)
             result[b, :] = c[0]
             b += 1

@@ -60,7 +60,7 @@ class UCF101(data_utils.Dataset):
         for label in self.labels:
             flag = 0
             for vidi in range(len(self.videolist[label])):
-                if processed+vidi == index:
+                if processed + vidi == index:
                     vidname = self.videolist[label][vidi]
                     framelist = self.framemap[label][vidname]
                     stepSize = 6
